@@ -133,6 +133,42 @@ install_gh() {
     echo "GitHub CLI (gh) installation attempt finished. Verify with 'gh --version'."
 }
 
+install_gcloud() {
+    echo "Attempting to install Google Cloud CLI (gcloud)..."
+    local current_os pkg_mgr
+    current_os=$(get_os_type)
+    pkg_mgr=$(get_package_manager)
+
+    if command -v gcloud &>/dev/null; then
+        echo "Google Cloud CLI (gcloud) is already installed. Version: $(gcloud --version | head -n1). Skipping."
+        return
+    fi
+
+    if [[ "$current_os" == "linux" && "$pkg_mgr" == "apt" ]]; then
+        run_package_update
+        run_package_install curl gpg
+        echo "Adding Google Cloud CLI GPG key and repository..."
+        curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+        run_package_update
+        run_package_install google-cloud-cli
+        echo "Installing additional components..."
+        run_package_install google-cloud-cli-gke-gcloud-auth-plugin
+    elif [[ "$current_os" == "windows" && "$pkg_mgr" == "choco" ]]; then
+        echo "Attempting to install Google Cloud CLI using Chocolatey..."
+        run_package_install gcloudsdk
+    else
+        echo "Automated Google Cloud CLI installation is primarily set up for Linux (apt) or Windows (choco)."
+        echo "For OS: $current_os with Pkg Mgr: $pkg_mgr, please install Google Cloud CLI manually."
+        echo "Download from: https://cloud.google.com/sdk/docs/install"
+        return 1
+    fi
+    echo "Google Cloud CLI (gcloud) installation attempt finished. Verify with 'gcloud --version'."
+    echo "Next steps:"
+    echo "  1. Run: gcloud auth login"
+    echo "  2. Run: gcloud config set project YOUR_PROJECT_ID"
+}
+
 # Check for sudo privileges early if on Linux
 ensure_sudo_linux
 
@@ -158,6 +194,10 @@ for arg in "$@"; do
         ;;
     --install-gh)
         install_gh
+        shift
+        ;;
+    --install-gcloud)
+        install_gcloud
         shift
         ;;
     *)
