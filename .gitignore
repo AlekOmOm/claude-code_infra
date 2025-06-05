@@ -1,0 +1,12 @@
+# node modules
+node_modules
+
+# env files
+.env.gcloud
+!.env.template
+
+# logs
+logs
+*.log
+
+# temp files
