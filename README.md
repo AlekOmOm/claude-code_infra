@@ -8,6 +8,30 @@ This setup provides **three operational paths**: (1) secure home-server deployme
 
 **Key capabilities include**: claude-user account isolation with systemd sandboxing, UFW firewall configuration for Windows client access, GitHub Actions workflows for automated PR processing, and comprehensive monitoring with audit logging. The solution supports both direct Claude Code usage and MCP server deployment, with failover mechanisms and resource management for production home-lab environments.
 
+## Quick Start
+
+The easiest way to deploy Claude Code infrastructure is using the interactive orchestrator:
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/claude-code_infra.git
+cd claude-code_infra
+
+# Launch the interactive orchestrator
+./run.sh
+# or
+make run
+```
+
+The orchestrator will:
+1. ✅ Check prerequisites and install missing tools
+2. 📝 Gather required information (server IP, SSH keys, tokens)
+3. 🚀 Deploy Claude Code to your Ubuntu server
+4. 🔍 Verify the deployment is healthy
+5. 🔌 Connect you directly to Claude Code
+
+For manual deployment or advanced configuration, continue reading below.
+
 ## Complete Terraform Infrastructure Configuration
 
 ### Main Infrastructure Module
