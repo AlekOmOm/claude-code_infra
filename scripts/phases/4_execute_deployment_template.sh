@@ -53,7 +53,7 @@ set +a
 echo ".env file loaded successfully."
 
 # Check 3: Existence and executability of the main deployment script
-MAIN_DEPLOY_SCRIPT="./scripts/deploy_claude_infrastructure.sh"
+MAIN_DEPLOY_SCRIPT="./scripts/src/deploy_claude_infrastructure.sh"
 echo -n "Checking for main deployment script ($MAIN_DEPLOY_SCRIPT)... "
 if [ ! -f "$MAIN_DEPLOY_SCRIPT" ]; then
     echo "ERROR: Main deployment script NOT FOUND at $MAIN_DEPLOY_SCRIPT." >&2
@@ -105,14 +105,42 @@ echo "$CMD"
 echo "-----------------------------------------------------------"
 
 echo ""
-echo "To execute the deployment:"
-echo "1. Ensure you are in the project root directory (claude-code_infra)."
-echo "2. Copy the command above and run it directly in your terminal."
-echo "   OR"
-echo "3. Uncomment and run the 'eval' line below (ensure this script is in the project root)."
-echo "   # eval \"$CMD\""
+echo "This script will now execute the deployment command."
+echo "The deployment process will:"
+echo "  - Set up Claude Code infrastructure on ${TARGET_SERVER_IP}"
+echo "  - Create necessary users and services"
+echo "  - Configure security settings"
 echo ""
-echo "After execution, proceed to './scripts/5_post_deployment_verification.sh' to verify the deployment."
+read -p "Do you want to proceed with the deployment? (y/N): " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Starting deployment..."
+    echo "-----------------------------------------------------------"
+    eval "$CMD"
+    DEPLOYMENT_EXIT_CODE=$?
+    
+    if [ $DEPLOYMENT_EXIT_CODE -eq 0 ]; then
+        echo "-----------------------------------------------------------"
+        echo "✅ Deployment command completed successfully!"
+        echo ""
+        echo "Next steps:"
+        echo "1. Run './scripts/phases/5_post_deployment_verification.sh' to verify the deployment"
+        echo "2. Check the DEPLOYMENT_SUMMARY.md file for details"
+    else
+        echo "-----------------------------------------------------------"
+        echo "❌ Deployment command failed with exit code: $DEPLOYMENT_EXIT_CODE"
+        echo ""
+        echo "Please check the error messages above and try again."
+        exit $DEPLOYMENT_EXIT_CODE
+    fi
+else
+    echo "Deployment cancelled by user."
+    echo ""
+    echo "You can run this script again when ready to deploy."
+    exit 0
+fi
+
 echo "-----------------------------------------------------------"
 
 # Make the script executable: chmod +x scripts/4_execute_deployment_template.sh

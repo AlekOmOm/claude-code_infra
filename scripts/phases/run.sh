@@ -104,12 +104,6 @@ source .env
 # Check if already deployed
 print_status "Checking deployment status..."
 
-# Create deployment check utility if it doesn't exist
-if [ ! -f "$IMPL_DIR/utils/deploy_check_utils.sh" ]; then
-    mkdir -p "$IMPL_DIR/utils"
-    # We'll create this file next
-fi
-
 # Source deployment check utilities
 source "$IMPL_DIR/utils/deploy_check_utils.sh"
 
@@ -121,11 +115,6 @@ if [ "$DEPLOYMENT_STATUS" = "deployed" ]; then
     
     # Check remote environment health
     print_status "Checking remote environment health..."
-    
-    # Create remote environment check utility if it doesn't exist
-    if [ ! -f "$IMPL_DIR/utils/remote_environment_check.sh" ]; then
-        # We'll create this file next
-    fi
     
     # Source and run environment check
     source "$IMPL_DIR/utils/remote_environment_check.sh"

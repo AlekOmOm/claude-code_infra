@@ -61,6 +61,21 @@ else
     echo "OK (placeholders seem to be updated)."
 fi
 
+# Check 3: Existence and executability of the main deployment script
+MAIN_DEPLOY_SCRIPT="./scripts/src/deploy_claude_infrastructure.sh"
+echo -n "Checking for main deployment script ($MAIN_DEPLOY_SCRIPT)... "
+if [ ! -f "$MAIN_DEPLOY_SCRIPT" ]; then
+    echo "ERROR: Main deployment script NOT FOUND at $MAIN_DEPLOY_SCRIPT."
+    echo "       This script is essential for Phase 4. It should be part of the project structure."
+    errors_found=true
+elif [ ! -x "$MAIN_DEPLOY_SCRIPT" ]; then
+    echo "ERROR: Main deployment script at $MAIN_DEPLOY_SCRIPT is NOT EXECUTABLE."
+    echo "       Please run: chmod +x $MAIN_DEPLOY_SCRIPT"
+    errors_found=true
+else
+    echo "OK."
+fi
+
 if $errors_found; then
     echo "---------------------------------------------------------"
     echo "❌ Please address the errors above before proceeding."
