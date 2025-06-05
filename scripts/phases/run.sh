@@ -47,18 +47,54 @@ cd "$PROJECT_ROOT"
 # Ensure .env file exists
 ensure_env_file
 
+# Check infrastructure type first
+infrastructure_type=$(get_env_value "INFRASTRUCTURE_TYPE" "")
+
+if [[ -z "$infrastructure_type" || "$infrastructure_type" == "CHOOSE_INFRASTRUCTURE_TYPE" ]]; then
+    print_status "Infrastructure type not selected. Running infrastructure choice..."
+    echo ""
+    
+    # Phase 0: Infrastructure choice
+    if ! "$PHASES_DIR/0_infrastructure_choice.sh"; then
+        print_error "Infrastructure choice failed. Please try again."
+        exit 1
+    fi
+    echo ""
+    
+    # Reload configuration after infrastructure choice
+    source .env
+    infrastructure_type=$(get_env_value "INFRASTRUCTURE_TYPE" "")
+fi
+
+print_status "Infrastructure type: $infrastructure_type"
+
 # Check if all required environment variables are set
 print_status "Checking configuration status..."
 
-REQUIRED_VARS=(
-    "TARGET_SERVER_IP=YOUR_SERVER_IP_HERE"
-    "SSH_KEY_PATH=YOUR_SSH_KEY_PATH_HERE"
+# Base required variables for all deployment types
+BASE_REQUIRED_VARS=(
+    "SSH_PUBLIC_KEY_PATH=/path/to/your/ssh_public_key.pub"
     "GITHUB_PAT=YOUR_GITHUB_PERSONAL_ACCESS_TOKEN_HERE"
     "ANTHROPIC_API_KEY=YOUR_ANTHROPIC_API_KEY_HERE"
-    "CLAUDE_USER=claude-user"
-    "DEPLOY_MODE=production"
+    "CLAUDE_USER_NAME=claude-user"
+    "DEPLOYMENT_MODE=production"
     "ENABLE_MCP_SERVER=true"
 )
+
+# Add infrastructure-specific required variables
+REQUIRED_VARS=("${BASE_REQUIRED_VARS[@]}")
+
+if [[ "$infrastructure_type" == "home-server" ]]; then
+    REQUIRED_VARS+=("TARGET_SERVER_IP=YOUR_SERVER_IP_HERE")
+elif [[ "$infrastructure_type" == "gcloud" ]]; then
+    REQUIRED_VARS+=(
+        "GOOGLE_CLOUD_PROJECT="
+        "GOOGLE_CLOUD_REGION="
+        "GOOGLE_CLOUD_ZONE="
+        "GCP_INSTANCE_STRATEGY="
+        "GCP_MACHINE_TYPE="
+    )
+fi
 
 CONFIG_COMPLETE=true
 if ! check_required_env_vars ".env" "${REQUIRED_VARS[@]}"; then
@@ -144,18 +180,37 @@ if [ "$DEPLOYMENT_STATUS" = "deployed" ]; then
             print_status "Connecting to Claude Code..."
             echo ""
             
-            # Get the project directory
-            PROJECT_DIR=$(get_env_value "CLAUDE_PROJECT_DIR" "/home/$CLAUDE_USER/workspaces/sample-project")
-            
-            # SSH into the server and run claude
-            print_status "Launching Claude in $PROJECT_DIR..."
-            echo "Use 'exit' to return to this menu."
-            echo ""
-            
-            ssh -t "${CLAUDE_USER}@${TARGET_SERVER_IP}" "cd $PROJECT_DIR && claude"
+            # Handle different infrastructure types
+            if [[ "$infrastructure_type" == "gcloud" ]]; then
+                # Use GCP SSH connection
+                local instance_name=$(get_env_value "GCP_INSTANCE_NAME")
+                local zone=$(get_env_value "GCP_INSTANCE_ZONE")
+                local claude_user=$(get_env_value "CLAUDE_USER_NAME" "claude-user")
+                
+                if [[ -n "$instance_name" && -n "$zone" ]]; then
+                    print_status "Connecting via Google Cloud..."
+                    source "$IMPL_DIR/gcloud_utils.sh"
+                    gcp_ssh_instance "$instance_name" "$zone" "$claude_user"
+                else
+                    print_error "GCP instance details not found. Please check your configuration."
+                fi
+            else
+                # Home server SSH connection
+                local project_dir=$(get_env_value "CLAUDE_PROJECT_DIR" "/home/$CLAUDE_USER_NAME/workspaces/sample-project")
+                print_status "Launching Claude in $project_dir..."
+                echo "Use 'exit' to return to this menu."
+                echo ""
+                ssh -t "${CLAUDE_USER_NAME}@${TARGET_SERVER_IP}" "cd $project_dir && claude"
+            fi
         else
             print_status "You can connect manually using:"
-            echo "  ssh ${CLAUDE_USER}@${TARGET_SERVER_IP}"
+            if [[ "$infrastructure_type" == "gcloud" ]]; then
+                local instance_name=$(get_env_value "GCP_INSTANCE_NAME")
+                local zone=$(get_env_value "GCP_INSTANCE_ZONE")
+                echo "  gcloud compute ssh ${CLAUDE_USER_NAME}@${instance_name} --zone=${zone}"
+            else
+                echo "  ssh ${CLAUDE_USER_NAME}@${TARGET_SERVER_IP}"
+            fi
             echo "  cd ~/workspaces/sample-project"
             echo "  claude"
         fi
@@ -177,10 +232,16 @@ elif [ "$DEPLOYMENT_STATUS" = "partial" ]; then
     read -r response
     
     if [[ "$response" =~ ^[Yy]$ ]]; then
-        # Run deployment phase
-        if ! "$PHASES_DIR/4_execute_deployment_template.sh"; then
-            print_error "Deployment failed. Please check the output above."
-            exit 1
+        # Run deployment phase based on infrastructure type
+        if [[ "$infrastructure_type" == "gcloud" ]]; then
+            print_status "Completing GCP deployment..."
+            source "$IMPL_DIR/gcp_deploy.sh"
+            gcp_deploy_claude_infrastructure
+        else
+            if ! "$PHASES_DIR/4_execute_deployment_template.sh"; then
+                print_error "Deployment failed. Please check the output above."
+                exit 1
+            fi
         fi
         
         # Run verification
@@ -198,13 +259,20 @@ else
     read -r response
     
     if [[ "$response" =~ ^[Yy]$ ]]; then
-        # Run deployment phase
+        # Run deployment phase based on infrastructure type
         print_status "Starting deployment..."
         echo ""
         
-        if ! "$PHASES_DIR/4_execute_deployment_template.sh"; then
-            print_error "Deployment failed. Please check the output above."
-            exit 1
+        if [[ "$infrastructure_type" == "gcloud" ]]; then
+            print_status "Deploying to Google Cloud Platform..."
+            source "$IMPL_DIR/gcp_deploy.sh"
+            gcp_deploy_claude_infrastructure
+        else
+            print_status "Deploying to home server..."
+            if ! "$PHASES_DIR/4_execute_deployment_template.sh"; then
+                print_error "Deployment failed. Please check the output above."
+                exit 1
+            fi
         fi
         echo ""
         
