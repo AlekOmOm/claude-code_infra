@@ -65,11 +65,22 @@ check_command() {
     return 0
 }
 
+# Check infrastructure type to determine required tools
+infrastructure_type=$(get_env_value "INFRASTRUCTURE_TYPE" "")
+
+# Core tools required for all deployments
 check_command "terraform" "terraform" "--version" "Terraform v1.5.0 or higher is required."
 check_command "node" "node" "--version" "Node.js (LTS recommended, e.g., 20.x)."
 check_command "npm" "node" "--version" "npm (comes with Node.js)."
 check_command "git" "git" "--version" "Git."
 check_command "gh" "gh" "--version" "GitHub CLI (gh)."
+
+# Check Google Cloud CLI if GCP infrastructure is selected
+if [[ "$infrastructure_type" == "gcloud" ]]; then
+    echo ""
+    echo "Google Cloud Platform tools (required for GCP deployment):"
+    check_command "gcloud" "gcloud" "--version" "Google Cloud CLI (gcloud)."
+fi
 
 echo "---------------------------------------------------------"
 
@@ -80,7 +91,13 @@ if [ ${#failed_tools[@]} -eq 0 ]; then
     echo "Initializing .env file if needed..."
     if ensure_env_file; then # ensure_env_file is from env_utils.sh
         echo "You can now proceed to fill in your specific details."
-        echo "Please run './scripts/2_information_gathering_input.sh' to input your deployment details into .env."
+        
+        # Check if infrastructure choice has been made
+        if [[ -z "$infrastructure_type" || "$infrastructure_type" == "CHOOSE_INFRASTRUCTURE_TYPE" ]]; then
+            echo "Please run './scripts/phases/0_infrastructure_choice.sh' to select your infrastructure type."
+        else
+            echo "Please run './scripts/phases/2_information_gathering_input.sh' to input your deployment details into .env."
+        fi
     else
         echo "Error initializing .env file. Please check $ENV_TEMPLATE_PATH and permissions." >&2
     fi
@@ -119,4 +136,4 @@ else
 fi
 echo "---------------------------------------------------------"
 
-# Make the script executable: chmod +x scripts/1_prerequisites_check.sh
+# Make the script executable: chmod +x scripts/phases/1_prerequisites_check.sh
