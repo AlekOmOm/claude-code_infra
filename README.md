@@ -4,7 +4,11 @@ A comprehensive infrastructure-as-code solution for deploying Claude Code secure
 
 ## Executive Overview
 
-This setup provides **three operational paths**: (1) secure home-server deployment with dedicated user isolation, (2) continuous PR review workflow with CodeRabbit integration, and (3) MCP server option for advanced AI-assisted development. The infrastructure uses Terraform for complete environment provisioning, implements security hardening following CIS benchmarks, and includes automated GitHub workflows for seamless development cycles.
+This setup provides **three operational paths**: 
+
+1) (1) secure home-server deployment with dedicated user isolation, 
+2) (2) continuous PR review workflow with CodeRabbit integration, and 
+3) (3) MCP server option for advanced AI-assisted development. The infrastructure uses Terraform for complete environment provisioning, implements security hardening following CIS benchmarks, and includes automated GitHub workflows for seamless development cycles.
 
 **Key capabilities include**: claude-user account isolation with systemd sandboxing, UFW firewall configuration for Windows client access, GitHub Actions workflows for automated PR processing, and comprehensive monitoring with audit logging. The solution supports both direct Claude Code usage and MCP server deployment, with failover mechanisms and resource management for production home-lab environments.
 
